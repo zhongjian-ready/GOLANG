@@ -16,16 +16,34 @@ type Client struct {
 	flag       int
 }
 
-func NewClient(serverIp string, serverPort int) *Client {
-	// create client object
+type ClientOption func(*Client)
+
+func WithServerIp(ip string) ClientOption {
+	return func(c *Client) {
+		c.ServerIp = ip
+	}
+}
+
+func WithServerPort(port int) ClientOption {
+	return func(c *Client) {
+		c.ServerPort = port
+	}
+}
+
+func NewClient(opts ...ClientOption) *Client {
+	// create client object with defaults
 	client := &Client{
-		ServerIp:   serverIp,
-		ServerPort: serverPort,
+		ServerIp:   "127.0.0.1",
+		ServerPort: 8888,
 		flag:       999,
 	}
 
+	for _, opt := range opts {
+		opt(client)
+	}
+
 	// link server
-	conn, err := net.Dial("tcp", net.JoinHostPort(serverIp, fmt.Sprintf("%d", serverPort)))
+	conn, err := net.Dial("tcp", net.JoinHostPort(client.ServerIp, fmt.Sprintf("%d", client.ServerPort)))
 	if err != nil {
 		fmt.Println("net.Dial error:", err)
 		return nil
@@ -151,17 +169,14 @@ func (c *Client) Run() {
 			// public chat logic
 			fmt.Println("Public Chat selected.")
 			c.PublicChat()
-			break
 		case 2:
 			// private chat logic
 			fmt.Println("Private Chat selected.")
 			c.PrivateChat()
-			break
 		case 3:
 			// update user name logic
 			fmt.Println("Update User Name selected.")
 			c.UpdateName(c.Name)
-			break
 		case 0:
 			// exit
 			fmt.Println("Exiting...")
@@ -180,7 +195,7 @@ func init() {
 }
 
 func main() {
-	client := NewClient(serverIp, serverPort)
+	client := NewClient(WithServerIp(serverIp), WithServerPort(serverPort))
 	if client == nil {
 		fmt.Println("Failed to create client.")
 		return
