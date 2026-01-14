@@ -2,26 +2,26 @@ package main
 
 import "fmt"
 
-type Hunman struct {
+type Human struct {
 	name string
 	age  int
 }
 
-func (h Hunman) Show() {
+func (h Human) Show() {
 	fmt.Println("name =", h.name)
 	fmt.Println("age =", h.age)
 }
 
-func (h *Hunman) Eat() {
+func (h *Human) Eat() {
 	fmt.Println(h.name, "is eating")
 }
 
-func (h *Hunman) Sleep() {
+func (h *Human) Sleep() {
 	fmt.Println(h.name, "is sleeping")
 }
 
-type   struct {
-	Hunman
+type Student struct {
+	Human
 	school string
 }
 
@@ -31,7 +31,7 @@ func (s Student) Sleep() {
 
 func main() {
 	s := Student{
-		Hunman: Hunman{
+		Human: Human{
 			name: "zhangsan",
 			age:  20,
 		},
