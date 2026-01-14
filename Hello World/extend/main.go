@@ -20,7 +20,7 @@ func (h *Hunman) Sleep() {
 	fmt.Println(h.name, "is sleeping")
 }
 
-type Student struct {
+type   struct {
 	Hunman
 	school string
 }

@@ -5,7 +5,7 @@ import "fmt"
 func main() {
 	s := []int{10, 20, 30, 40, 50}
 	fmt.Println(s[1:4])
-	fmt.Println(s[:3])
+	fmt.Println(s[:3]) 
 	fmt.Println(s[2:])
 	fmt.Println(s[:])
 	fmt.Println("len = ", len(s))

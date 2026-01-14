@@ -2,6 +2,14 @@ package main
 
 import "fmt"
 
+/*
+arrays in Go are fixed-size sequences of elements of a single type. They are defined using the syntax [n]T,
+where n is the number of elements and T is the type of each element.
+1. fixed size
+2. same type
+3. indexable
+4. contiguous in memory
+*/
 func main() {
 	var arr [5]int = [5]int{1, 2, 3, 4, 5}
 
