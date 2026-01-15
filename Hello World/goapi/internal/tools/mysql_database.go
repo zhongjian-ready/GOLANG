@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-
 	// Import the MySQL driver anonymously to register it with database/sql
 
 	_ "github.com/go-sql-driver/mysql"
@@ -42,13 +41,56 @@ func (d *MySQLDB) SetupDatabase() error {
 	return nil
 }
 
+// SetupSchema creates necessary tables if they don't exist
+func (d *MySQLDB) SetupSchema() error {
+	// 1. Create users table
+	// 对应 GetUserLoginDetails 中的查询
+	createUsersQuery := `
+	CREATE TABLE IF NOT EXISTS users (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		username VARCHAR(255) NOT NULL UNIQUE,
+		auth_token VARCHAR(255) NOT NULL
+	);`
+
+	if _, err := d.db.Exec(createUsersQuery); err != nil {
+		return err
+	}
+
+	// 2. Create coin_details table
+	// 对应 GetUserCoins 中的查询
+	createCoinsQuery := `
+	CREATE TABLE IF NOT EXISTS coin_details (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		username VARCHAR(255) NOT NULL UNIQUE,
+		balance BIGINT NOT NULL
+	);`
+
+	if _, err := d.db.Exec(createCoinsQuery); err != nil {
+		return err
+	}
+
+	// 3. (可选) 插入测试数据，为了方便演示
+	// 使用 IGNORE 关键字，如果数据已存在则忽略，避免重复出错
+	seedUserQuery := `INSERT IGNORE INTO users (id, username, auth_token) VALUES (1, 'zhongjian', '123456');`
+	if _, err := d.db.Exec(seedUserQuery); err != nil {
+		return err
+	}
+
+	seedCoinQuery := `INSERT IGNORE INTO coin_details (id, username, balance) VALUES (1, 'zhongjian', 1000);`
+	if _, err := d.db.Exec(seedCoinQuery); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetUserLoginDetails fetches the login credentials for a specific user
-func (d *MySQLDB) GetUserLoginDetails(username string) *LoginDetails {
+func (d *MySQLDB) GetUserLoginDetails(userid int) *LoginDetails {
 	var details LoginDetails
-	query := "SELECT username, auth_token FROM users WHERE username = ?"
+	query := "SELECT id, username, auth_token FROM users WHERE id = ?"
 
 	// Execute the query and scan the result into the struct
-	err := d.db.QueryRow(query, username).Scan(&details.Username, &details.AuthToken)
+	err := d.db.QueryRow(query, userid).Scan(&details.UserID, &details.Username, &details.AuthToken)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Error(err)
@@ -61,11 +103,11 @@ func (d *MySQLDB) GetUserLoginDetails(username string) *LoginDetails {
 }
 
 // GetUserCoins retrieves the coin balance for a user
-func (d *MySQLDB) GetUserCoins(username string) *CoinDetails {
+func (d *MySQLDB) GetUserCoins(userid int) *CoinDetails {
 	var details CoinDetails
-	query := "SELECT username, balance FROM coin_details WHERE username = ?"
+	query := "SELECT id, username, balance FROM coin_details WHERE id = ?"
 
-	err := d.db.QueryRow(query, username).Scan(&details.Username, &details.Balance)
+	err := d.db.QueryRow(query, userid).Scan(&details.UserID, &details.Username, &details.Balance)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Error(err)

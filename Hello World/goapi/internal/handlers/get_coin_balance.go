@@ -24,7 +24,7 @@ func GetCoinBalance(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	// 尝试将 URL 查询参数（Query Parameters）解码到 params 结构体中。
-	// 例如：?username=alex 会被映射到 params.UserName。
+	// 例如：?userid=1 会被映射到 params.UserId。
 	err = decoder.Decode(&params, r.URL.Query())
 
 	if err != nil {
@@ -49,12 +49,14 @@ func GetCoinBalance(w http.ResponseWriter, r *http.Request) {
 	// 4. 查询数据
 	// 调用数据库接口的 GetUserCoins 方法，根据用户名查询硬币详情。
 	var tokenDetails *tools.CoinDetails
-	tokenDetails = (*database).GetUserCoins(params.UserName)
+	
+	// params.UserID 已经是 int 类型，无需转换
+	tokenDetails = (*database).GetUserCoins(params.UserID)
 
 	if tokenDetails == nil {
 		// 如果查询结果为空（用户不存在或没有数据），记录错误并返回。
 		// 这里虽然叫 RequestErrorHandler，但可能在该上下文中也用于表示资源未找到或逻辑错误。
-		log.Error("Failed to get coin details for user:", params.UserName)
+		log.Error("Failed to get coin details for user:", params.UserID)
 		api.RequestErrorHandler(w, err)
 		return
 	}

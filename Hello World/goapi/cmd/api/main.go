@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/zhongjian-ready/goapi/internal/handlers"
+	"github.com/zhongjian-ready/goapi/internal/tools"
 )
 
 func main() {
@@ -17,10 +19,31 @@ func main() {
 		log.Warn("Error loading .env file")
 	}
 
+	// 解析命令行参数
+	// 使用 -migrate 参数来触发数据库表结构初始化
+	migrate := flag.Bool("migrate", false, "Run database migration (create tables)")
+	flag.Parse()
+
 	// 1. 设置日志配置
 	// 配置 logrus 日志库，让它在打印日志时，额外显示是哪个函数、哪个文件调用的。
 	// 这对于排查问题非常有用（比如会显示: main.main at /path/to/main.go:14）。
 	log.SetReportCaller(true)
+
+	// 如果指定了 -migrate 参数，执行建表逻辑
+	if *migrate {
+		log.Info("Running database migration...")
+		db, err := tools.NewDatabase()
+		if err != nil {
+			log.Fatal("Failed to connect to database for migration:", err)
+		}
+		// 注意：NewDatabase 返回的是 *DatabaseInterface，这是一个指向接口的指针。
+		// 在 Go 中，接口本身已经包含了底层数据的类型和值，通常不需要使用指向接口的指针。
+		// 虽然这里定义稍微有点冗余（返回了 *DatabaseInterface），但我们需要解引用来调用接口方法。
+		if err := (*db).SetupSchema(); err != nil {
+			log.Fatal("Failed to setup schema:", err)
+		}
+		log.Info("Database migration completed successfully.")
+	}
 
 	// 2. 初始化路由 (Router)
 	// 创建一个新的 Chi 路由器实例。Chi 是一个轻量级、高性能的路由库。

@@ -7,9 +7,9 @@ import (
 
 // CoinBalanceParam 定义了获取硬币余额接口的请求参数。
 // 虽然这个接口主要通过 Authorization 头获取用户信息，但这里预留了查询参数结构。
-// UserName: 用户名，对应数据库中的用户标识。
+// UserID: 用户ID，对应数据库中的用户标识。
 type CoinBalanceParam struct {
-	UserName string
+	UserID int `schema:"userid"`
 }
 
 // CoinBalanceResponse 定义了获取硬币余额接口的响应结构。

@@ -3,15 +3,17 @@ package middleware
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/zhongjian-ready/goapi/api"
 	"github.com/zhongjian-ready/goapi/internal/tools"
 )
 
 // UnAuthorizedError 定义了一个标准的未授权错误。
-// 当用户名或 Token 无效时使用。
-var UnAuthorizedError = errors.New("Invalid username or token.")
+// 当用户ID或 Token 无效时使用。
+var UnAuthorizedError = errors.New("Invalid userid or token.")
 
 // Authorization 是一个 HTTP 中间件函数，用于验证请求的合法性。
 // 它接收一个 http.Handler (next)，并返回一个新的 http.Handler。
@@ -19,15 +21,22 @@ var UnAuthorizedError = errors.New("Invalid username or token.")
 func Authorization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. 获取认证信息
-		// 从查询参数中获取 username。
-		username := r.URL.Query().Get("username")
+		// 从查询参数中获取 userid。
+		useridStr := r.URL.Query().Get("userid")
+		// 将 userid 字符串转换为 int
+		userid, err := strconv.Atoi(useridStr)
+		if err != nil {
+			log.Error("Invalid userid format:", err)
+			api.RequestErrorHandler(w, UnAuthorizedError)
+			return
+		}
+
 		// 从 HTTP Header 中获取 Authorization Token。
 		token := r.Header.Get("Authorization")
-		var err error
 
 		// 2. 基础校验
-		// 如果用户名或 Token 均为空，则认为请求未携带认证信息，记录错误并返回。
-		if username == "" && token == "" {
+		// 如果用户ID或 Token 均为空，则认为请求未携带认证信息，记录错误并返回。
+		if useridStr == "" && token == "" {
 			log.Error(UnAuthorizedError)
 			api.RequestErrorHandler(w, UnAuthorizedError)
 			return
@@ -46,7 +55,7 @@ func Authorization(next http.Handler) http.Handler {
 		// 4. 验证用户凭证
 		// 从数据库中获取该用户的登录详情（包括正确的 AuthToken）。
 		var loginDetails *tools.LoginDetails
-		loginDetails = (*database).GetUserLoginDetails(username)
+		loginDetails = (*database).GetUserLoginDetails(userid)
 
 		// 5. 比对 Token
 		// 如果用户不存在 (loginDetails == nil)
