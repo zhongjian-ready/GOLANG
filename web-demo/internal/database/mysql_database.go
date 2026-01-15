@@ -1,13 +1,15 @@
-package tools
+package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"time" // 新增导入
+
 	// Import the MySQL driver anonymously to register it with database/sql
 
 	_ "github.com/go-sql-driver/mysql"
-	log "github.com/sirupsen/logrus"
+	"github.com/zhongjian-ready/goapi/internal/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,15 +19,15 @@ type MySQLDB struct {
 }
 
 // SetupDatabase configures the database connection using environment variables
-func (d *MySQLDB) SetupDatabase() error {
+func (d *MySQLDB) SetupDatabase(cfg *config.Config) error {
 	var err error
-	// Construct the Data Source Name (DSN) from environment variables
+	// Construct the Data Source Name (DSN) from config
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
 	)
 
 	// Open a new connection pool to the database
@@ -38,6 +40,12 @@ func (d *MySQLDB) SetupDatabase() error {
 	if err = d.db.Ping(); err != nil {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
+
+	// === 新增：配置数据库连接池 ===
+	// 避免在高并发下创建过多连接导致数据库崩溃
+	d.db.SetMaxOpenConns(25)                 // 最大打开连接数
+	d.db.SetMaxIdleConns(25)                 // 最大空闲连接数
+	d.db.SetConnMaxLifetime(5 * time.Minute) // 连接最大存活时间
 
 	return nil
 }
@@ -92,35 +100,37 @@ func (d *MySQLDB) SetupSchema() error {
 }
 
 // GetUserLoginDetails fetches the login credentials for a specific user
-func (d *MySQLDB) GetUserLoginDetails(username string) *LoginDetails {
+func (d *MySQLDB) GetUserLoginDetails(ctx context.Context, username string) (*LoginDetails, error) {
 	var details LoginDetails
 	query := "SELECT id, username, password FROM users WHERE username = ?"
 
 	// Execute the query and scan the result into the struct
-	err := d.db.QueryRow(query, username).Scan(&details.UserID, &details.Username, &details.Password)
+	// 使用 QueryRowContext 支持上下文取消
+	err := d.db.QueryRowContext(ctx, query, username).Scan(&details.UserID, &details.Username, &details.Password)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Error(err)
+		if err == sql.ErrNoRows {
+			// 返回 nil 和 nil error 表示没找到
+			return nil, nil
 		}
-		// Return nil if user not found or error occurred
-		return nil
+		// 不要在这里打日志，把错误返回给调用者处理，避免双重日志
+		return nil, err
 	}
 
-	return &details
+	return &details, nil
 }
 
 // GetUserCoins retrieves the coin balance for a user
-func (d *MySQLDB) GetUserCoins(userid int) *CoinDetails {
+func (d *MySQLDB) GetUserCoins(ctx context.Context, userid int) (*CoinDetails, error) {
 	var details CoinDetails
 	query := "SELECT id, username, balance FROM coin_details WHERE id = ?"
 
-	err := d.db.QueryRow(query, userid).Scan(&details.UserID, &details.Username, &details.Balance)
+	err := d.db.QueryRowContext(ctx, query, userid).Scan(&details.UserID, &details.Username, &details.Balance)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			log.Error(err)
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
-		return nil
+		return nil, err
 	}
 
-	return &details
+	return &details, nil
 }
