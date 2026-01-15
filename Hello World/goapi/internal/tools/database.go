@@ -4,28 +4,40 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// LoginDetails 存储用户的登录认证信息。
 type LoginDetails struct {
-	Username  string
-	AuthToken string
+	Username  string // 用户名
+	AuthToken string // 认证令牌
 }
 
+// CoinDetails 存储用户的虚拟货币信息。
 type CoinDetails struct {
-	Username string
-	Balance  int64
+	Username string // 用户名
+	Balance  int64  // 余额
 }
 
+// DatabaseInterface 定义了数据访问层的统一接口。
+// 任何实现了这些方法的结构体（如 MockDB, MySQLDB, PostgresDB）都可以作为 Database 使用。
+// 这遵循了依赖倒置原则，方便测试和更换数据库实现。
 type DatabaseInterface interface {
-	GetUserLoginDetails(username string) *LoginDetails
-	GetUserCoins(username string) *CoinDetails
-	SetupDatabase() error
+	GetUserLoginDetails(username string) *LoginDetails // 根据用户名获取登录信息
+	GetUserCoins(username string) *CoinDetails         // 根据用户名获取硬币信息
+	SetupDatabase() error                              // 初始化数据库连接或结构
 }
 
+// NewDatabase 是一个工厂函数，用于创建和返回一个 DatabaseInterface 实例。
+// 目前它硬编码返回 &mockDB{}，在实际项目中，这里可以根据配置加载真实的数据库驱动。
 func NewDatabase() (*DatabaseInterface, error) {
+	// 创建一个 mockDB 实例。
 	var database DatabaseInterface = &mockDB{}
+
+	// 初始化数据库（虽然 mockDB 不需要做太多事情）。
 	err := database.SetupDatabase()
 	if err != nil {
 		log.Error("Failed to setup database:", err)
-		return nil,  err
+		return nil, err
 	}
+
+	// 返回数据库接口指针。
 	return &database, nil
 }

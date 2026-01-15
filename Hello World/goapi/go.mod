@@ -1,4 +1,4 @@
-module github.com/avukadin/goapi
+module github.com/zhongjian-ready/goapi
 
 go 1.25.5
 
