@@ -19,14 +19,18 @@ func Handler(r *chi.Mux) {
 	// 定义路由组 "/account"
 	// 所有以 "/account" 开头的请求都会进入这个闭包内配置的规则。
 	r.Route("/account", func(router chi.Router) {
+		// 1. 公开接口 (不需要鉴权)
+		router.Post("/login", Login)
 
-		// 路由组中间件：Authorization
-		//在这个路由组下的所有请求，都会先经过 middleware.Authorization 中间件。
-		// 这个中间件负责检查用户是否已登录、权限是否足够。
-		router.Use(middleware.Authorization)
+		// 2. 受保护接口 (需要鉴权)
+		router.Group(func(r chi.Router) {
+			// 路由组中间件：Authorization
+			// 在这个路由组下的所有请求，都会先经过 middleware.Authorization 中间件。
+			r.Use(middleware.Authorization)
 
-		// 路由规则：GET /account/coins
-		// 当收到 GET 方法的 "/account/coins" 请求时，调用 GetCoinBalance 函数处理。
-		router.Get("/coins", GetCoinBalance)
+			// 路由规则：GET /account/coins
+			// 当收到 GET 方法的 "/account/coins" 请求时，调用 GetCoinBalance 函数处理。
+			r.Get("/coins", GetCoinBalance)
+		})
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/schema"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/zhongjian-ready/goapi/api"
@@ -14,50 +13,38 @@ import (
 // GetCoinBalance 是处理获取用户硬币余额请求的 Handler 函数。
 // 对应的路由是: GET /account/coins
 func GetCoinBalance(w http.ResponseWriter, r *http.Request) {
-	// 1. 定义请求参数结构体
-	// 使用 api 包中定义的 CoinBalanceParam 结构体来接收参数。
-	var params = api.CoinBalanceParam{}
-
-	// 2. 解析请求参数
-	// 创建一个 gorilla/schema 的解码器实例。
-	var decoder *schema.Decoder = schema.NewDecoder()
-	var err error
-
-	// 尝试将 URL 查询参数（Query Parameters）解码到 params 结构体中。
-	// 例如：?userid=1 会被映射到 params.UserId。
-	err = decoder.Decode(&params, r.URL.Query())
-
-	if err != nil {
-		// 如果解码失败，记录错误日志，并返回客户端错误响应 (400 Bad Request)。
-		log.Error("Failed to decode request parameters:", err)
-		api.RequestErrorHandler(w, err)
-		return
-	}
-
-	// 3. 连接数据库
-	// 使用 tools 包的 NewDatabase 工厂函数创建一个数据库接口实例。
-	var database *tools.DatabaseInterface
-	database, err = tools.NewDatabase()
-
-	if err != nil {
-		// 如果数据库连接/初始化失败，返回内部服务器错误 (500 Internal Server Error)。
-		// 注意：具体的错误信息在 NewDatabase 内部可能已经被记录了，或者这里可以补充记录。
+	// 1. 从 Token 中获取 UserID
+	// 鉴权中间件已经验证了 Token 并将 userid 放入了 Context
+	userID, ok := r.Context().Value("userid").(int)
+	if !ok {
+		log.Error("User ID missing from context")
 		api.InternalErrorHandler(w)
 		return
 	}
 
-	// 4. 查询数据
-	// 调用数据库接口的 GetUserCoins 方法，根据用户名查询硬币详情。
+	// 2. 连接数据库
+	// 使用 tools 包的 NewDatabase 工厂函数创建一个数据库接口实例。
+	var database *tools.DatabaseInterface
+	var err error
+	database, err = tools.NewDatabase()
+
+	if err != nil {
+		// 如果数据库连接/初始化失败，返回内部服务器错误 (500 Internal Server Error)。
+		api.InternalErrorHandler(w)
+		return
+	}
+
+	// 3. 查询数据
+	// 调用数据库接口的 GetUserCoins 方法，根据 UserID 查询硬币详情。
 	var tokenDetails *tools.CoinDetails
-	
-	// params.UserID 已经是 int 类型，无需转换
-	tokenDetails = (*database).GetUserCoins(params.UserID)
+
+	// 使用从 Token 提取的 userID
+	tokenDetails = (*database).GetUserCoins(userID)
 
 	if tokenDetails == nil {
 		// 如果查询结果为空（用户不存在或没有数据），记录错误并返回。
-		// 这里虽然叫 RequestErrorHandler，但可能在该上下文中也用于表示资源未找到或逻辑错误。
-		log.Error("Failed to get coin details for user:", params.UserID)
-		api.RequestErrorHandler(w, err)
+		log.Error("Failed to get coin details for user:", userID)
+		api.InternalErrorHandler(w)
 		return
 	}
 

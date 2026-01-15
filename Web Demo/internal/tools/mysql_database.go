@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // MySQLDB is a wrapper around the standard sql.DB connection
@@ -49,7 +50,7 @@ func (d *MySQLDB) SetupSchema() error {
 	CREATE TABLE IF NOT EXISTS users (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		username VARCHAR(255) NOT NULL UNIQUE,
-		auth_token VARCHAR(255) NOT NULL
+		password VARCHAR(255) NOT NULL
 	);`
 
 	if _, err := d.db.Exec(createUsersQuery); err != nil {
@@ -70,9 +71,15 @@ func (d *MySQLDB) SetupSchema() error {
 	}
 
 	// 3. (可选) 插入测试数据，为了方便演示
-	// 使用 IGNORE 关键字，如果数据已存在则忽略，避免重复出错
-	seedUserQuery := `INSERT IGNORE INTO users (id, username, auth_token) VALUES (1, 'zhongjian', '123456');`
-	if _, err := d.db.Exec(seedUserQuery); err != nil {
+	// 为了演示，我们将密码设为 "123456" 的哈希值
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// 使用 IGNORE 关键字，如果数据已存在则忽略
+	seedUserQuery := `INSERT IGNORE INTO users (id, username, password) VALUES (1, 'zhongjian', ?);`
+	if _, err := d.db.Exec(seedUserQuery, string(hashedPassword)); err != nil {
 		return err
 	}
 
@@ -85,12 +92,12 @@ func (d *MySQLDB) SetupSchema() error {
 }
 
 // GetUserLoginDetails fetches the login credentials for a specific user
-func (d *MySQLDB) GetUserLoginDetails(userid int) *LoginDetails {
+func (d *MySQLDB) GetUserLoginDetails(username string) *LoginDetails {
 	var details LoginDetails
-	query := "SELECT id, username, auth_token FROM users WHERE id = ?"
+	query := "SELECT id, username, password FROM users WHERE username = ?"
 
 	// Execute the query and scan the result into the struct
-	err := d.db.QueryRow(query, userid).Scan(&details.UserID, &details.Username, &details.AuthToken)
+	err := d.db.QueryRow(query, username).Scan(&details.UserID, &details.Username, &details.Password)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			log.Error(err)
