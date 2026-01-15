@@ -5,12 +5,18 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/zhongjian-ready/goapi/internal/handlers"
 )
 
 func main() {
+	// 0. 加载环境变量
+	if err := godotenv.Load(); err != nil {
+		log.Warn("Error loading .env file")
+	}
+
 	// 1. 设置日志配置
 	// 配置 logrus 日志库，让它在打印日志时，额外显示是哪个函数、哪个文件调用的。
 	// 这对于排查问题非常有用（比如会显示: main.main at /path/to/main.go:14）。

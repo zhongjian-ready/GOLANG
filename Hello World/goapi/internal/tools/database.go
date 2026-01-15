@@ -26,12 +26,11 @@ type DatabaseInterface interface {
 }
 
 // NewDatabase 是一个工厂函数，用于创建和返回一个 DatabaseInterface 实例。
-// 目前它硬编码返回 &mockDB{}，在实际项目中，这里可以根据配置加载真实的数据库驱动。
 func NewDatabase() (*DatabaseInterface, error) {
-	// 创建一个 mockDB 实例。
-	var database DatabaseInterface = &mockDB{}
+	// 创建一个 MySQLDB 实例。
+	var database DatabaseInterface = &MySQLDB{}
 
-	// 初始化数据库（虽然 mockDB 不需要做太多事情）。
+	// 初始化数据库连接
 	err := database.SetupDatabase()
 	if err != nil {
 		log.Error("Failed to setup database:", err)
