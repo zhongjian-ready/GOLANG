@@ -33,6 +33,5 @@ Thumbs.db
 Desktop.ini
 
 # Project specific binary names (assuming default build output)
-api
 main
 goapi
